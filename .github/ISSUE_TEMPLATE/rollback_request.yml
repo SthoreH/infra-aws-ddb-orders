@@ -1,0 +1,41 @@
+name: Rollback de Infraestrutura
+description: Solicitar rollback da infraestrutura para um commit anterior
+labels: ["rollback", "pending-approval"]
+body:
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Ambiente
+      description: Em qual ambiente o rollback deve ser aplicado?
+      options:
+        - dev
+        - prod
+    validations:
+      required: true
+
+  - type: input
+    id: target_tag
+    attributes:
+      label: Tag ou Release alvo
+      description: Tag Git para a qual a infraestrutura deve ser revertida (deve existir no repositório)
+      placeholder: "v1.2.3"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reason
+    attributes:
+      label: Motivo
+      description: Descreva o problema que motivou o rollback
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmação
+      options:
+        - label: Confirmei que a tag alvo existe no repositório e descreve o estado desejado da infraestrutura
+          required: true
+        - label: Estou ciente de que o rollback executará `terraform apply` e pode alterar recursos existentes
+          required: true
