@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: danhenrique/github-actions-workflows/actions/terraform-validate@main
+      - uses: danhenrique/github-actions-workflows/actions/terraform-validate@v1.0.0
         with:
           working-directory: terraform-aws
           tfvars: environments/dev.tfvars
@@ -33,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: danhenrique/github-actions-workflows/actions/terraform-validate@main
+      - uses: danhenrique/github-actions-workflows/actions/terraform-validate@v1.0.0
         with:
           working-directory: terraform-aws
           tfvars: environments/prod.tfvars
