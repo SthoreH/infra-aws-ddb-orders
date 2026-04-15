@@ -1,7 +1,7 @@
 
 
 module "ecommerce_table" {
-  source = "github.com/SthoreH/terraform-aws-dynamodb?ref=v1.2.0"
+  source = "github.com/DanHenrique/terraform-aws-dynamodb?ref=v1.2.2"
 
   table_name = local.table_name
   hash_key   = "PK"
@@ -18,6 +18,7 @@ module "ecommerce_table" {
     { name = "GSI2PK",     type = "S" },
     { name = "GSI2SK",     type = "S" },
     { name = "entityType", type = "S" },
+    { name = "createdAt", type = "S" },
   ]
 
   ttl_attribute = "expiresAt"
