@@ -11,12 +11,12 @@ module "ecommerce_table" {
   deletion_protection_enabled = var.deletion_protection_enabled
 
   attributes = [
-    { name = "PK",         type = "S" },
-    { name = "SK",         type = "S" },
-    { name = "GSI1PK",     type = "S" },
-    { name = "GSI1SK",     type = "S" },
-    { name = "GSI2PK",     type = "S" },
-    { name = "GSI2SK",     type = "S" },
+    { name = "PK", type = "S" },
+    { name = "SK", type = "S" },
+    { name = "GSI1PK", type = "S" },
+    { name = "GSI1SK", type = "S" },
+    { name = "GSI2PK", type = "S" },
+    { name = "GSI2SK", type = "S" },
     { name = "entityType", type = "S" },
     { name = "createdAt", type = "S" },
   ]
