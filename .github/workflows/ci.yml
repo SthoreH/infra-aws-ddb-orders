@@ -9,45 +9,34 @@ permissions:
   contents: read
 
 jobs:
-  validate:
-    name: Terraform Validate (${{ matrix.environment }})
+  validate-dev:
+    name: Terraform Validate (dev)
+    if: github.base_ref == 'dev'
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - environment: dev
-            tfvars: environments/dev.tfvars
-          - environment: prod
-            tfvars: environments/prod.tfvars
-    environment: ${{ matrix.environment }}
-    defaults:
-      run:
-        working-directory: terraform-aws
+    environment: dev
     steps:
       - uses: actions/checkout@v4
 
-      - uses: hashicorp/setup-terraform@v3
+      - uses: danhenrique/github-actions-workflows/actions/terraform-validate@main
         with:
-          terraform_version: 1.14.8
+          working-directory: terraform-aws
+          tfvars: environments/dev.tfvars
+          tf-backend-bucket: ${{ vars.TF_STATE_BUCKET }}
+          tf-backend-key: ${{ github.event.repository.name }}/terraform.tfstate
+          aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+  validate-prod:
+    name: Terraform Validate (prod)
+    if: github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: danhenrique/github-actions-workflows/actions/terraform-validate@main
         with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: sa-east-1
-
-      - name: Terraform Format Check
-        run: terraform fmt -check -recursive
-
-      - name: Terraform Init
-        run: |
-          terraform init \
-            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
-            -backend-config="key=${{ github.event.repository.name }}/terraform.tfstate"
-
-      - name: Terraform Validate
-        run: terraform validate
-
-      - name: Terraform Plan
-        run: terraform plan -var-file=${{ matrix.tfvars }} -no-color
+          working-directory: terraform-aws
+          tfvars: environments/prod.tfvars
+          tf-backend-bucket: ${{ vars.TF_STATE_BUCKET }}
+          tf-backend-key: ${{ github.event.repository.name }}/terraform.tfstate
+          aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
