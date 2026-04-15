@@ -1,0 +1,40 @@
+name: Destroy de Infraestrutura
+description: Solicitar destruição completa de um ambiente (apenas dev)
+labels: ["destroy", "pending-approval"]
+body:
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Ambiente
+      description: Apenas dev é permitido via automação. Para prod, execute manualmente via CLI.
+      options:
+        - dev
+    validations:
+      required: true
+
+  - type: textarea
+    id: reason
+    attributes:
+      label: Motivo
+      description: Justificativa para a destruição do ambiente
+    validations:
+      required: true
+
+  - type: input
+    id: confirmation
+    attributes:
+      label: Confirmação
+      description: 'Digite exatamente "DESTROY" para confirmar a operação'
+      placeholder: DESTROY
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: awareness
+    attributes:
+      label: Ciência
+      options:
+        - label: Estou ciente de que esta operação é irreversível e destruirá todos os recursos do ambiente
+          required: true
+        - label: Confirmo que não há dados que precisam ser preservados neste ambiente
+          required: true
