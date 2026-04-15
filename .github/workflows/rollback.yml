@@ -1,0 +1,135 @@
+name: Rollback
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  id-token: write
+  contents: read
+  issues: write
+
+jobs:
+  parse:
+    name: Parse issue
+    if: github.event.label.name == 'rollback-approved'
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.parse.outputs.environment }}
+      target_tag: ${{ steps.parse.outputs.target_tag }}
+    steps:
+      - name: Extract data from issue body
+        id: parse
+        env:
+          BODY: ${{ github.event.issue.body }}
+        run: |
+          ENV=$(echo "$BODY" | grep -A2 "### Ambiente" | grep -E "^(dev|prod)$" | tr -d '[:space:]')
+          TAG=$(echo "$BODY" | grep -A2 "### Tag ou Release alvo" | grep -E "^v[0-9]+\.[0-9]+\.[0-9]" | tr -d '[:space:]')
+
+          if [[ -z "$ENV" || -z "$TAG" ]]; then
+            echo "Não foi possível extrair ambiente ou tag do issue."
+            exit 1
+          fi
+
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+          echo "target_tag=$TAG" >> $GITHUB_OUTPUT
+
+  rollback-dev:
+    name: Terraform Rollback (dev)
+    needs: parse
+    if: needs.parse.outputs.environment == 'dev'
+    runs-on: ubuntu-latest
+    environment: dev
+    defaults:
+      run:
+        working-directory: terraform-aws
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.parse.outputs.target_tag }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.14.8
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_INFRA_ROLE_ARN }}
+          aws-region: sa-east-1
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ vars.TF_BACKEND_BUCKET }}" \
+            -backend-config="key=${{ github.event.repository.name }}/terraform.tfstate"
+
+      - name: Terraform Plan
+        run: terraform plan -var-file=environments/dev.tfvars -no-color
+
+      - name: Terraform Apply
+        run: terraform apply -var-file=environments/dev.tfvars -auto-approve
+
+      - name: Comment on issue
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ job.status }}' === 'success' ? '✅ Rollback aplicado com sucesso' : '❌ Rollback falhou';
+            const tag = '${{ needs.parse.outputs.target_tag }}';
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `**${status}** no ambiente \`dev\`\nTag aplicada: \`${tag}\`\nWorkflow: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+            });
+
+  rollback-prod:
+    name: Terraform Rollback (prod)
+    needs: parse
+    if: needs.parse.outputs.environment == 'prod'
+    runs-on: ubuntu-latest
+    environment: prod      # aguarda aprovação manual se Required reviewers estiver configurado
+    defaults:
+      run:
+        working-directory: terraform-aws
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.parse.outputs.target_tag }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.14.8
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_INFRA_ROLE_ARN }}
+          aws-region: sa-east-1
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ vars.TF_BACKEND_BUCKET }}" \
+            -backend-config="key=${{ github.event.repository.name }}/terraform.tfstate"
+
+      - name: Terraform Plan
+        run: terraform plan -var-file=environments/prod.tfvars -no-color
+
+      - name: Terraform Apply
+        run: terraform apply -var-file=environments/prod.tfvars -auto-approve
+
+      - name: Comment on issue
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ job.status }}' === 'success' ? '✅ Rollback aplicado com sucesso' : '❌ Rollback falhou';
+            const tag = '${{ needs.parse.outputs.target_tag }}';
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `**${status}** no ambiente \`prod\`\nTag aplicada: \`${tag}\`\nWorkflow: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+            });
