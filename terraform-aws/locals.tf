@@ -1,5 +1,5 @@
 locals {
-  table_name = "ecommerce"
+  table_name = "ecommerces"
 
   tags = {
     Project     = "SthoreH"
