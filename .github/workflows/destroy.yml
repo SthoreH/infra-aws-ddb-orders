@@ -19,6 +19,8 @@ jobs:
       run:
         working-directory: terraform-aws
     steps:
+      - uses: actions/checkout@v4
+
       - name: Validate issue data
         id: validate
         env:
@@ -38,8 +40,6 @@ jobs:
           fi
 
           echo "Validações OK — prosseguindo com destroy de dev."
-
-      - uses: actions/checkout@v4
 
       - uses: hashicorp/setup-terraform@v3
         with:
