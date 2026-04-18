@@ -1,11 +1,8 @@
 locals {
-  table_name = "ecommerces"
+  table_name = "orders"
 
   tags = {
-    Project     = "SthoreH"
-    Environment = var.environment
     ManagedBy   = "terraform"
-    Repository  = "github.com/SthoreH/infra-aws-ddb-ecommerce"
-    Creator     = "danhenrique"
+    Repository  = "github.com/SthoreH/infra-aws-ddb-orders"
   }
 }
