@@ -1,8 +1,6 @@
 locals {
   table_name = "orders"
 
-  iam_prefix = "sthore"
-
   template_variables = {
     account_id  = data.aws_caller_identity.current.account_id
     environment = var.environment
