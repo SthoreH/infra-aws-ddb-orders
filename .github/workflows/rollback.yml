@@ -5,20 +5,19 @@ on:
     types: [labeled]
 
 permissions:
-  id-token: write
   contents: read
   issues: write
 
 jobs:
   parse:
-    name: Parse issue
+    name: Parse Issue
     if: github.event.label.name == 'rollback-approved'
     runs-on: ubuntu-latest
     outputs:
       environment: ${{ steps.parse.outputs.environment }}
       target_tag: ${{ steps.parse.outputs.target_tag }}
     steps:
-      - name: Extract data from issue body
+      - name: Parse Issue Body
         id: parse
         env:
           BODY: ${{ github.event.issue.body }}
@@ -34,102 +33,31 @@ jobs:
           echo "environment=$ENV" >> $GITHUB_OUTPUT
           echo "target_tag=$TAG" >> $GITHUB_OUTPUT
 
-  rollback-dev:
-    name: Terraform Rollback (dev)
+  rollback:
+    name: Rollback Infra
     needs: parse
-    if: needs.parse.outputs.environment == 'dev'
+    uses: SthoreH/shd-github-actions-workflows/.github/workflows/cd-infra-terraform.yml@v1.6.0
+    with:
+      environment: ${{ needs.parse.outputs.environment }}
+      ref: ${{ needs.parse.outputs.target_tag }}
+    secrets: inherit
+
+  comment:
+    name: Comment on Issue
+    needs: [parse, rollback]
+    if: always() && needs.parse.result == 'success'
     runs-on: ubuntu-latest
-    environment: dev
-    defaults:
-      run:
-        working-directory: terraform-aws
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.parse.outputs.target_tag }}
-
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.14.8
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: sa-east-1
-
-      - name: Terraform Init
-        run: |
-          terraform init \
-            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
-            -backend-config="key=${{ github.event.repository.name }}/terraform.tfstate"
-
-      - name: Terraform Plan
-        run: terraform plan -var-file=environments/dev.tfvars -no-color
-
-      - name: Terraform Apply
-        run: terraform apply -var-file=environments/dev.tfvars -auto-approve
-
-      - name: Comment on issue
-        if: always()
-        uses: actions/github-script@v7
+      - uses: actions/github-script@v7
         with:
           script: |
-            const status = '${{ job.status }}' === 'success' ? '✅ Rollback aplicado com sucesso' : '❌ Rollback falhou';
+            const success = '${{ needs.rollback.result }}' === 'success';
+            const status = success ? '✅ Rollback aplicado com sucesso' : '❌ Rollback falhou';
+            const env = '${{ needs.parse.outputs.environment }}';
             const tag = '${{ needs.parse.outputs.target_tag }}';
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `**${status}** no ambiente \`dev\`\nTag aplicada: \`${tag}\`\nWorkflow: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
-            });
-
-  rollback-prod:
-    name: Terraform Rollback (prod)
-    needs: parse
-    if: needs.parse.outputs.environment == 'prod'
-    runs-on: ubuntu-latest
-    environment: prod      # aguarda aprovação manual se Required reviewers estiver configurado
-    defaults:
-      run:
-        working-directory: terraform-aws
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.parse.outputs.target_tag }}
-
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.14.8
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: sa-east-1
-
-      - name: Terraform Init
-        run: |
-          terraform init \
-            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
-            -backend-config="key=${{ github.event.repository.name }}/terraform.tfstate"
-
-      - name: Terraform Plan
-        run: terraform plan -var-file=environments/prod.tfvars -no-color
-
-      - name: Terraform Apply
-        run: terraform apply -var-file=environments/prod.tfvars -auto-approve
-
-      - name: Comment on issue
-        if: always()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const status = '${{ job.status }}' === 'success' ? '✅ Rollback aplicado com sucesso' : '❌ Rollback falhou';
-            const tag = '${{ needs.parse.outputs.target_tag }}';
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `**${status}** no ambiente \`prod\`\nTag aplicada: \`${tag}\`\nWorkflow: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+              body: `**${status}** no ambiente \`${env}\`\nTag aplicada: \`${tag}\`\nWorkflow: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
             });

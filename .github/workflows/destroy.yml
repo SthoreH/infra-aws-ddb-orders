@@ -11,18 +11,12 @@ permissions:
 
 jobs:
   destroy:
-    name: Terraform Destroy (dev)
+    name: Destroy Terraform
     if: github.event.label.name == 'destroy-approved'
     runs-on: ubuntu-latest
     environment: dev
-    defaults:
-      run:
-        working-directory: terraform-aws
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Validate issue data
-        id: validate
+      - name: Validate Issue
         env:
           BODY: ${{ github.event.issue.body }}
         run: |
@@ -41,26 +35,29 @@ jobs:
 
           echo "Validações OK — prosseguindo com destroy de dev."
 
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.14.8
+      - uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: SthoreH/shd-github-actions-workflows/actions/parse-config@v1.6.0
+        id: config-parser
         with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: sa-east-1
+          environment: dev
 
-      - name: Terraform Init
+      - name: Export Config
         run: |
-          terraform init \
-            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
-            -backend-config="key=${{ github.event.repository.name }}/terraform.tfstate"
+          echo "TF_VERSION=${{ fromJSON(steps.config-parser.outputs.config)['pipe_infra_terraform-version'] }}" >> $GITHUB_ENV
+          echo "TF_PATH=${{ fromJSON(steps.config-parser.outputs.config)['pipe_infra_working-path'] }}" >> $GITHUB_ENV
 
-      - name: Terraform Destroy
-        run: terraform destroy -var-file=environments/dev.tfvars -auto-approve
+      - name: Destroy Terraform
+        uses: SthoreH/shd-github-actions-workflows/actions/destroy-terraform@v1.6.0
+        with:
+          environment: dev
+          working-directory: ${{ env.TF_PATH }}
+          terraform-version: ${{ env.TF_VERSION }}
+          aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
+          tf-backend-bucket: ${{ vars.TF_STATE_BUCKET }}
+          tf-backend-key: ${{ github.event.repository.name }}/terraform.tfstate
 
-      - name: Comment and close issue
+      - name: Close Issue
         if: always()
         uses: actions/github-script@v7
         with:

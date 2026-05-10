@@ -1,5 +1,5 @@
 module "table_default_policies" {
-  source = "github.com/SthoreH/shd-terraform-aws-iam?ref=v1.0.1"
+  source = "github.com/SthoreH/shd-terraform-aws-iam?ref=v1.1.2"
 
   policies = [
     {
