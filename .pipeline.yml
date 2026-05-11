@@ -1,0 +1,13 @@
+infra:
+  # TODO: Alinhar com Python/Node.js para 1.14.9 quando o módulo
+  # github.com/DanHenrique/terraform-aws-dynamodb publicar uma versão com required_version flexível.
+  terraform-version: "1.14.9"
+  working-path: terraform-aws
+
+environments:
+  dev:
+    # Documental — o deploy real lê o ARN de vars.AWS_ROLE_ARN do GitHub Environment.
+    # Útil quando há replace-tokens ou quando outras peças do pipeline precisam consumir.
+    role-arn: arn:aws:iam::000000000000:role/REPLACE_WITH_DEV_ROLE
+  prod:
+    role-arn: arn:aws:iam::000000000000:role/REPLACE_WITH_PROD_ROLE

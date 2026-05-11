@@ -6,7 +6,7 @@ paths:
 
 # Terraform Rules
 
-- **Version:** `1.14.8` | **AWS Provider:** `6.40.0`
+- **Terraform version:** pinned in [.pipeline.yml](../../.pipeline.yml) under `infra.terraform-version`. Do not hardcode elsewhere. **AWS Provider:** `6.40.0`.
 - **Backend:** S3 with partial config — bucket injected by pipeline via `terraform init -backend-config`.
 - **State key:** `{repo-name}/terraform.tfstate`.
 - **IaC always in:** `terraform-aws/` at the root of each repository.

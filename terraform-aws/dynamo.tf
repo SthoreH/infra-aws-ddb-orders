@@ -1,7 +1,7 @@
 
 
 module "ecommerce_table" {
-  source = "github.com/DanHenrique/terraform-aws-dynamodb?ref=v1.2.2"
+  source = "github.com/DanHenrique/terraform-aws-dynamodb?ref=v1.2.3"
 
   table_name = local.table_name
   hash_key   = "PK"
